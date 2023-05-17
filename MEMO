@@ -1,0 +1,41 @@
+connection frequency 30Hz~
+
+
+packet loss
+high ping
+inconsistent ping
+congestion
+
+
+
+
+client1
+play > state[] > server
+server > state[] > game
+
+
+server
+client > state[] > clients
+
+
+client2
+play > state[] > server
+server > state[] > game
+
+
+
+setState(player[id].position)
+getState(player[id].position)
+
+state
+- team[]:
+- - playerid[]
+- - items[]
+- player[]:
+- - id
+- - position
+- - toward
+- - item
+- - state:
+- - - item (using ~, idle)
+- - - progress (running, returning, goal)
