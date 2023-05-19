@@ -32,11 +32,16 @@ func startUDP() {
 	defer udpServer.Close()
 
 	for {
+		// todo:
+		// make byte array pool for each goroutine to make use of and return for reuse.
+		// stream of long packet may be dealt with byte arrays for each streams
 		buf := make([]byte, 1024)
-		_, addr, err := udpServer.ReadFrom(buf)
-		if err != nil {
-			continue
+		resLen, addr, err := udpServer.ReadFrom(buf)
+		if resLen > 0 {
+			if err != nil {
+				continue
+			}
+			go UDPHandler(udpServer, addr, buf, resLen)
 		}
-		go UDPHandler(udpServer, addr, buf)
 	}
 }
