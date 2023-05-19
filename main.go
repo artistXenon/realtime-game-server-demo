@@ -5,10 +5,13 @@ import (
 	"log"
 	"net"
     "net/http"
+	ina_http"inagame/HTTP"
+	ina_udp "inagame/UDP"
 )
 
 
 func main() {
+	fmt.Println(ina_udp.Blyat)
 	ch := make(chan int)
 	go startHTTP()
 	go startUDP()
@@ -19,7 +22,7 @@ func main() {
 
 
 func startHTTP() {
-    http.HandleFunc("/hello", HTTPHandler)
+    http.HandleFunc("/hello", ina_http.HTTPHandler)
 
     http.ListenAndServe(":5000", nil)
 }
@@ -41,7 +44,7 @@ func startUDP() {
 			if err != nil {
 				continue
 			}
-			go UDPHandler(udpServer, addr, buf, resLen)
+			go ina_udp.UDPHandler(udpServer, addr, buf, resLen)
 		}
 	}
 }
