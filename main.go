@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net"
-    "net/http"
+	"net/http"
 
-	globalContext "inagame/global-context"
-	ina_http "inagame/HTTP"
-	ina_udp "inagame/UDP"
-
+	"inagame/HTTP"
+	"inagame/UDP"
+	"inagame/state"
 	// mazer "inagame/maze"
 )
-
 
 func main() {
 	ch := make(chan int)
@@ -21,19 +19,18 @@ func main() {
 	// maze.SetWidth(5).SetHeight(5).Init()
 
 	// go maze.Generate(ch)
-	fmt.Println(globalContext.GameCapacity)
+	fmt.Println(state.GameCapacity)
 	go startHTTP()
 	go startUDP()
 
-	x := <- ch
+	x := <-ch
 	fmt.Println(x)
 	// fmt.Printf(maze.Serialize())
-}	
-
+}
 
 func startHTTP() {
-    http.HandleFunc("/hello", ina_http.HTTPHandler)
-    http.ListenAndServe(":5000", nil)
+	http.HandleFunc("/create", HTTP.HTTPHandler)
+	http.ListenAndServe(":5000", nil)
 }
 
 func startUDP() {
@@ -53,7 +50,7 @@ func startUDP() {
 			if err != nil {
 				continue
 			}
-			go ina_udp.UDPHandler(udpServer, addr, buf, resLen)
+			go UDP.UDPHandler(udpServer, addr, buf, resLen)
 		}
 	}
 }
