@@ -3,6 +3,8 @@ package UDP
 import (
 	// lobby "inagame/UDP/lobby"
 	"encoding/json"
+	"fmt"
+	"inagame/state/lobby"
 	"strconv"
 	"time"
 )
@@ -15,33 +17,55 @@ type times struct { // this sucks more than what I expected
 	Ping      int64
 }
 
+type pong struct {
+	Ping      int16
+	Offset    int16
+	SendDelay int16
+}
+
+// client ping will include nothing but time
+
 // receiveDelay: server time - sent client time
 // sendDelay: sent server time - client time
 // offset: server time - client time
 // ping: average (server time - sent server time, client time - sent client time)
 
-func onPing(body string) (res string, reply bool) {
-	clientTime, error := strconv.ParseInt(body, 0, 64) //TODO: json parse this thing.
+func onPing(msg *Message) (res string, reply bool) {
+	clientTime, error := strconv.ParseInt(msg.Body, 0, 64) //TODO: json parse this thing.
 	if error != nil {
 		// wrong stuff
-		return "not client", false
+		return "!not client", false
 	}
-	tTimes := times{}
-	tTimes.LocalTime = time.Now().UnixMilli()
+	player := lobby.Players[msg.UserId]
 
-	tTimes.Delay = tTimes.LocalTime - clientTime // ping + offset
+	if player == nil {
+		return "!not client", false
+	}
+	player.LastPing = time.Now().UnixMilli()
 
-	jsonTimes, _ := json.Marshal(tTimes) // err should never happens
+	player.ReceiveDelay = int16(player.LastPing - clientTime) // ping + offset
 
 	// todo: record this info for client
 	// player := nil //*lobby.Player     <-- definition required before unix call
-	return string(jsonTimes), true
+	return fmt.Sprintf("ping!%d!%d!", player.LastPing, player.ReceiveDelay), true
 
 }
 
-func onPong(body string) {
-	tTimes := times{}
-	json.Unmarshal([]byte(body), &tTimes)
+func onPong(msg *Message) {
+	player := lobby.Players[msg.UserId]
+	if player == nil {
+		return
+	}
+	p := pong{}
+	json.Unmarshal([]byte(msg.Body), &p)
+
+	player.Ping = int16((time.Now().UnixMilli() - player.LastPing) / 2)
+	player.SendDelay = p.SendDelay
+	player.TimeOffset = p.Offset
+
+	fmt.Printf("client calculated: %d %d\n", p.Offset, p.Ping)
+
+	fmt.Printf("server calculated: %d %d\n", p.Offset, player.Ping)
 
 	// todo: do something with tTimes
 }

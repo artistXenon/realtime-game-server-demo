@@ -1,7 +1,8 @@
 package state
 
-import lobby "inagame/state/lobby"
+import "inagame/state/lobby"
 
 var GameCapacity int = 10
 
-var Games []*lobby.Lobby = make([]*lobby.Lobby, GameCapacity)
+// todo: make Games a map[string]Lobby
+var Games = make(map[string]*lobby.Lobby)

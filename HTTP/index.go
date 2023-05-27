@@ -1,7 +1,7 @@
 package HTTP
 
 import (
-	// "fmt"
+	"fmt"
 	"inagame/state"
 	"inagame/state/lobby"
 	"net/http"
@@ -13,35 +13,37 @@ import (
 func HTTPHandler(w http.ResponseWriter, req *http.Request) {
 	// http://url?id=fwp3js
 
-	ids, ok := req.URL.Query()["id"]
-	prv, ok := req.URL.Query()["private"]
+	ids, iok := req.URL.Query()["id"]
+	id := ids[0]
+	prvs, pok := req.URL.Query()["private"]
+	prv := prvs[0]
 
-	if !ok || len(ids[0]) < 1 {
+	if !iok || len(id) < 1 {
 		w.Write([]byte("no id")) // todo: send status code
 		return
 	}
+	if !pok || len(prv) < 1 {
+		w.Write([]byte("no accessor")) // todo: send status code
+		return
+	}
 
-	idEmpty := -1
 	mtx := new(sync.RWMutex)
 	mtx.Lock()
 	defer mtx.Unlock()
-l1:
-	for index, element := range state.Games {
-		if element == nil {
-			idEmpty = index
-			break l1
-		}
-	}
 
-	if idEmpty == -1 {
+	if len(state.Games) >= state.GameCapacity {
 		w.Write([]byte("no capacity")) // todo: send status code
 	} else {
-		b, err := strconv.ParseBool(prv[0])
+		b, err := strconv.ParseBool(prv)
 		if err != nil {
 			w.Write([]byte("wrong format"))
 			return
 		}
-		state.Games[idEmpty] = lobby.NewLobby(ids[0], b)
+		// todo: check if id already exists in match list
+		lb := lobby.NewLobby(id, b)
+		state.Games[id] = lb
+
+		fmt.Printf("%#v\n", state.Games)
 		w.Write([]byte("match created"))
 		// todo: send status code
 		// todo: send server address

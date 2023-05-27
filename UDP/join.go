@@ -8,39 +8,34 @@ import (
 )
 
 type joinInfo struct { // JSON
-	Id     string
 	GameId string
 	Name   string
 }
 
-func onJoin(body string) (res string, reply bool) {
-	mtx := new(sync.RWMutex)
+func onJoin(msg *Message) (res string, reply bool) {
+	mtx := new(sync.RWMutex) //TODO: fix sync. this just doesn't feel right to make new lock every time a request comes.
 	inputData := joinInfo{}
-	err := json.Unmarshal([]byte(body), &inputData) // aware: id in multiple game
+	err := json.Unmarshal([]byte(msg.Body), &inputData)
 	if err != nil {
 		fmt.Println(err)
 		return "!", false
 	}
 
-	gameIndex := -1
-	mtx.RLock()
-l1:
-	for index, element := range state.Games {
-		if inputData.GameId == element.Id {
-			gameIndex = index
-			break l1
-		}
-	}
-	mtx.Unlock()
+	fmt.Println(inputData)
 
-	if gameIndex == -1 {
+	// var game *lobby.Lobby
+	mtx.RLock()
+	game := state.Games[inputData.GameId]
+	mtx.RUnlock()
+
+	if game == nil {
 		return "!wrong server", true
 	}
 
 	mtx.Lock()
-	game := state.Games[gameIndex]
+	defer mtx.Unlock()
 
-	game.InsertNewPlayer(inputData.Id, inputData.Name)
+	game.InsertNewPlayer(msg.UserId, inputData.Name)
 
 	fmt.Printf("%#v\n", inputData)
 	return "ok", true // todo better message?
