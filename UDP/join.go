@@ -8,8 +8,8 @@ import (
 )
 
 type joinInfo struct { // JSON
-	GameId string
-	Name   string
+	LobbyId string
+	Name    string
 }
 
 func onJoin(msg *Message) (res string, reply bool) {
@@ -25,11 +25,11 @@ func onJoin(msg *Message) (res string, reply bool) {
 
 	// var game *lobby.Lobby
 	mtx.RLock()
-	game := state.Games[inputData.GameId]
+	game := state.Games[inputData.LobbyId]
 	mtx.RUnlock()
 
 	if game == nil {
-		return "!wrong server", true
+		return "error!join:wrong server", true
 	}
 
 	mtx.Lock()

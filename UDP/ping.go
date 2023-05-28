@@ -59,7 +59,7 @@ func onPong(msg *Message) {
 	p := pong{}
 	json.Unmarshal([]byte(msg.Body), &p)
 
-	player.Ping = int16((time.Now().UnixMilli() - player.LastPing) / 2)
+	player.Ping = int16(time.Now().UnixMilli() - player.LastPing)
 	player.SendDelay = p.SendDelay
 	player.TimeOffset = p.Offset
 
