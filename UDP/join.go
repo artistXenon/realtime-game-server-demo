@@ -1,42 +1,14 @@
 package UDP
 
-import (
-	"encoding/json"
-	"fmt"
-	"inagame/state"
-	"sync"
-)
-
 type joinInfo struct { // JSON
 	LobbyId string
 	Name    string
 }
 
-func onJoin(msg *Message) (res string, reply bool) {
-	mtx := new(sync.RWMutex) //TODO: fix sync. this just doesn't feel right to make new lock every time a request comes.
-	inputData := joinInfo{}
-	err := json.Unmarshal([]byte(msg.Body), &inputData)
-	if err != nil {
-		fmt.Println(err)
-		return "!", false
+func onJoin(header *Header, body *[]byte) (err error, res *[]byte, reply bool) {
+	if header != nil && body != nil {
+		return nil, &[]byte{0x00}, true
+	} else {
+		return nil, &[]byte{0x01}, true
 	}
-
-	fmt.Println(inputData)
-
-	// var game *lobby.Lobby
-	mtx.RLock()
-	game := state.Games[inputData.LobbyId]
-	mtx.RUnlock()
-
-	if game == nil {
-		return "error!join:wrong server", true
-	}
-
-	mtx.Lock()
-	defer mtx.Unlock()
-
-	game.InsertNewPlayer(msg.UserId, inputData.Name)
-
-	fmt.Printf("%#v\n", inputData)
-	return "ok", true // todo better message?
 }

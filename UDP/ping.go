@@ -2,26 +2,10 @@ package UDP
 
 import (
 	// lobby "inagame/UDP/lobby"
-	"encoding/json"
-	"fmt"
-	"inagame/state/lobby"
-	"strconv"
+	"encoding/binary"
+	"errors"
 	"time"
 )
-
-type times struct { // this sucks more than what I expected
-	PlayerId  string `json:",omitempty"`
-	Delay     int64
-	LocalTime int64
-	Offset    int64
-	Ping      int64
-}
-
-type pong struct {
-	Ping      int16
-	Offset    int16
-	SendDelay int16
-}
 
 // client ping will include nothing but time
 
@@ -30,42 +14,37 @@ type pong struct {
 // offset: server time - client time
 // ping: average (server time - sent server time, client time - sent client time)
 
-func onPing(msg *Message) (res string, reply bool) {
-	clientTime, error := strconv.ParseInt(msg.Body, 0, 64) //TODO: json parse this thing.
-	if error != nil {
-		// wrong stuff
-		return "!not client", false
+func onPing(header *Header, body *[]byte) (err error, res *[]byte, reply bool) {
+	if header.User == nil {
+		return errors.New("Failed to identify user on ping message"), nil, false
 	}
-	player := lobby.Players[msg.UserId]
 
-	if player == nil {
-		return "!not client", false
-	}
-	player.LastPing = time.Now().UnixMilli()
+	timeBytes := (*body)[0:8]
+	sentTime := int64(binary.BigEndian.Uint64(timeBytes))
 
-	player.ReceiveDelay = int16(player.LastPing - clientTime) // ping + offset
+	lastPing := time.Now().UnixMilli()
+	header.User.LastPing = lastPing
+	receiveDelay := int16(lastPing - sentTime)
+	header.User.ReceiveDelay = receiveDelay
 
-	// todo: record this info for client
-	// player := nil //*lobby.Player     <-- definition required before unix call
-	return fmt.Sprintf("ping!%d!%d!", player.LastPing, player.ReceiveDelay), true
+	// generate ping res
+	pingBytes := make([]byte, 10)
+	binary.BigEndian.PutUint64(pingBytes, uint64(lastPing))
+	binary.BigEndian.PutUint16(pingBytes[8:], uint16(receiveDelay))
 
+	return nil, &pingBytes, true
 }
 
-func onPong(msg *Message) {
-	player := lobby.Players[msg.UserId]
-	if player == nil {
-		return
+func onPong(header *Header, body *[]byte) (err error, res *[]byte, reply bool) {
+	if header.User == nil {
+		return errors.New("Failed to identify user on ping message"), nil, false
 	}
-	p := pong{}
-	json.Unmarshal([]byte(msg.Body), &p)
 
-	player.Ping = int16(time.Now().UnixMilli() - player.LastPing)
-	player.SendDelay = p.SendDelay
-	player.TimeOffset = p.Offset
+	_, offset, sendDelay := binary.BigEndian.Uint16(*body), binary.BigEndian.Uint16((*body)[2:]), binary.BigEndian.Uint16((*body)[4:])
 
-	fmt.Printf("client calculated: %d %d\n", p.Offset, p.Ping)
+	header.User.Ping = int16(time.Now().UnixMilli() - header.User.LastPing)
+	header.User.SendDelay = int16(sendDelay)
+	header.User.TimeOffset = int16(offset)
 
-	fmt.Printf("server calculated: %d %d\n", p.Offset, player.Ping)
-
-	// todo: do something with tTimes
+	return nil, nil, false
 }

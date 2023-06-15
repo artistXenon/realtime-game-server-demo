@@ -30,23 +30,42 @@ func NewLobby(id string, private bool) *Lobby {
 	return lobby
 }
 
-func (lobby *Lobby) InsertNewPlayer(id int64, name string) bool {
-	inserted := false
+func (lobby *Lobby) AssignPlayer(player *Player) bool {
+	player.Lobby.RemovePlayer(player)
+
 	for _, team := range lobby.Teams {
 		if len(team.Players) > 1 {
 			continue
 		}
-		player := NewPlayer(id, name)
-		if player == nil {
-			return false
-		}
+		player.Lobby = lobby
 		player.Team = team.Id
 		player.IsReady = lobby.Private
 		team.Players = append(team.Players, player)
-		inserted = true
+		return true
 	}
-	if !inserted {
-		// todo: this shouldnt happen
-	}
-	return inserted
+
+	// TODO: one can reach here when insert failed. this shouldnt happen
+
+	return false
 }
+
+func (lobby *Lobby) RemovePlayer(player *Player) bool {
+	if player.Lobby == nil || player.Lobby.Id != lobby.Id {
+		return false
+	}
+	for _, team := range lobby.Teams {
+		for teamIndex, teamPlayer := range team.Players {
+			if teamPlayer.Id == player.Id {
+				team.Players = append(team.Players[:teamIndex], team.Players[teamIndex+1:]...)
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// TODO: rewrite inset new player w/ arg: Player
+// needs to check if player exist.
+// if exists, remove player from previous lobby
+// make sure this is clean.
+// and then insert this player to a `this` lobby
