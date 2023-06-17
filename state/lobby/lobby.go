@@ -2,6 +2,7 @@ package lobby
 
 import (
 	maze "inagame/maze"
+	"time"
 )
 
 const ( // enum Lobby State
@@ -19,6 +20,7 @@ type Lobby struct {
 }
 
 func NewLobby(id string, private bool) *Lobby {
+	// TODO: check if id already exists in match list
 	lobby := new(Lobby)
 	lobby.Id = id
 	lobby.Private = private
@@ -33,10 +35,13 @@ func NewLobby(id string, private bool) *Lobby {
 func (lobby *Lobby) AssignPlayer(player *Player) bool {
 	player.Lobby.RemovePlayer(player)
 
+	// TODO: check if any player is out dated after join
+
 	for _, team := range lobby.Teams {
 		if len(team.Players) > 1 {
 			continue
 		}
+		player.JoinTime = time.Now().UnixMilli()
 		player.Lobby = lobby
 		player.Team = team.Id
 		player.IsReady = lobby.Private
@@ -44,7 +49,7 @@ func (lobby *Lobby) AssignPlayer(player *Player) bool {
 		return true
 	}
 
-	// TODO: one can reach here when insert failed. this shouldnt happen
+	// one can reach here when insert failed. this shouldnt happen
 
 	return false
 }
@@ -63,9 +68,3 @@ func (lobby *Lobby) RemovePlayer(player *Player) bool {
 	}
 	return false
 }
-
-// TODO: rewrite inset new player w/ arg: Player
-// needs to check if player exist.
-// if exists, remove player from previous lobby
-// make sure this is clean.
-// and then insert this player to a `this` lobby

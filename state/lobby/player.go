@@ -13,7 +13,8 @@ type Player struct {
 	TimeOffset   int16
 	Ping         int16
 
-	Lobby *Lobby
+	Lobby    *Lobby
+	JoinTime int64
 
 	// mutable on waiting lobby
 	Team     int8
@@ -36,11 +37,12 @@ func CreatePlayer(id string, sessionKey string, lobby *Lobby) (player *Player) {
 		SessionKey: sessionKey,
 	}
 	lobby.AssignPlayer(p)
+	Players[id] = p
 	return p
 }
 
 func DestroyPlayer(id string) {
-	// p := Players[id]
-	// TODO: delete from lobby, delete from team
+	player := Players[id]
+	player.Lobby.RemovePlayer(player)
 	delete(Players, id)
 }

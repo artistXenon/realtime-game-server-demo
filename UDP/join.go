@@ -1,14 +1,13 @@
 package UDP
 
-type joinInfo struct { // JSON
-	LobbyId string
-	Name    string
-}
+import "fmt"
 
-func onJoin(header *Header, body *[]byte) (err error, res *[]byte, reply bool) {
+func onJoin(header *Header, body *[]byte) (res *[]byte, reply bool, err error) {
+	// TODO: parse bytes for username
 	if header != nil && body != nil {
-		return nil, &[]byte{0x00}, true
+		fmt.Printf("%s joined lobby %s\n", header.User.Id, header.Lobby.Id)
+		return &[]byte{0x00}, true, nil
 	} else {
-		return nil, &[]byte{0x01}, true
+		return &[]byte{0x01}, true, nil
 	}
 }

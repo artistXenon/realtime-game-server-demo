@@ -29,12 +29,13 @@ func main() {
 }
 
 func startHTTP() {
-	http.HandleFunc("/create", HTTP.HTTPHandler)
-	http.ListenAndServe(":5000", nil)
+	http.HandleFunc("/create", HTTP.HTTPCreateHandler)
+	http.HandleFunc("/join", HTTP.HTTPJoinHandler)
+	http.ListenAndServe(":5000", nil) // TODO: remove localhost
 }
 
 func startUDP() {
-	udpServer, err := net.ListenPacket("udp", ":5001")
+	udpServer, err := net.ListenPacket("udp", ":5001") // TODO: remove localhost
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +51,7 @@ func startUDP() {
 			if err != nil {
 				continue
 			}
-			go UDP.UDPHandler(udpServer, addr, buf, resLen)
+			go UDP.UDPHandler(udpServer, addr, &buf, resLen)
 		}
 	}
 }

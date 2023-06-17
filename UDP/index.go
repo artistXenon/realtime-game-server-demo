@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"inagame/crypto"
-	"inagame/db"
 	"inagame/state"
 	"inagame/state/lobby"
 	"math/big"
@@ -33,58 +32,45 @@ type Header struct {
  * lobbyid 5
  * [ body ~ ]
  */
-func parseHeader(buf []byte) (header *Header, body *[]byte) {
+func parseHeader(buf *[]byte, byteLength int) (header *Header, body *[]byte) {
 	idInt := new(big.Int)
-	idInt.SetBytes(buf[5:15])
+	idInt.SetBytes((*buf)[5:15])
 	idString := idInt.String()
-	lobbyString := string(buf[15:20])
+	lobbyString := string((*buf)[15:20])
 
-	// TODO: if user not in memory, access database to fetch sessionkey and etc
-	// note: if lobby where user is addresed to does not exist in this application, then we can reject connection (assume user does not exist)
 	clientUser := lobby.Players[idString]
 	clientLobby := state.Games[lobbyString]
 
-	if clientLobby == nil { // shouldn't happen
-		return nil, nil
-	}
-
 	// new player on this server. create and assign
-	if clientUser == nil {
-		sessionKey := db.GetPlayer(idString, lobbyString)
-		if sessionKey == nil {
-			return nil, nil
-		}
-		clientUser = lobby.CreatePlayer(idString, *sessionKey, clientLobby)
-
+	if clientUser == nil || clientLobby == nil || clientUser.Lobby.Id != clientLobby.Id {
+		return nil, nil
 		// previous player joined new lobby. re assign player w/ refreshed session key
-	} else if clientUser.Lobby.Id != clientLobby.Id {
-		sessionKey := db.GetPlayer(idString, lobbyString)
-		if sessionKey == nil {
-			return nil, nil
-		}
-		clientUser.SessionKey = *sessionKey
-		clientLobby.AssignPlayer(clientUser)
 	}
 
-	h := Header{Command: buf[4], User: clientUser}
+	h := Header{Command: (*buf)[4], User: clientUser}
 
-	signedBody := append([]byte(clientUser.SessionKey), buf[4:]...)
+	skipHash := h.Command == COMMAND_PING || h.Command == COMMAND_PONG
 
-	generatedHash := crypto.GenerateCRCHash(signedBody)
-	// insert client session key for hash
-	if generatedHash != binary.BigEndian.Uint32(buf[0:4]) {
-		return nil, nil
+	if !skipHash {
+		signedBody := append([]byte(clientUser.SessionKey), (*buf)[4:byteLength]...)
+
+		generatedHash := crypto.GenerateCRCHash(signedBody)
+		if generatedHash != binary.BigEndian.Uint32((*buf)[0:4]) {
+			return nil, nil
+		}
 	}
 
 	h.Lobby = clientLobby
 
-	bd := buf[20:]
+	bd := (*buf)[20:byteLength]
 	return &h, &bd
 }
 
-func UDPHandler(udpServer net.PacketConn, addr net.Addr, buf []byte, byteLength int) {
-	header, body := parseHeader(buf)
+// TODO: assumption - user should be created on http requests not udp requests.
 
+func UDPHandler(udpServer net.PacketConn, addr net.Addr, buf *[]byte, byteLength int) {
+	header, body := parseHeader(buf, byteLength)
+	// fmt.Printf("client user: %v\n", header)
 	if header == nil {
 		return
 	}
@@ -95,22 +81,24 @@ func UDPHandler(udpServer net.PacketConn, addr net.Addr, buf []byte, byteLength 
 	switch header.Command {
 	case COMMAND_CONNECT:
 		// do something
+		// or does not happen?
 	case COMMAND_JOIN:
-		err, response, doResponse = onJoin(header, body)
+		response, doResponse, err = onJoin(header, body)
 	case COMMAND_PING:
-		err, response, doResponse = onPing(header, body)
+		response, doResponse, err = onPing(header, body)
 	case COMMAND_PONG:
-		err, _, doResponse = onPong(header, body)
+		_, doResponse, err = onPong(header, body)
 	default:
 		// something is wrong. ignore packet
 	}
 
 	if err != nil {
-		fmt.Printf("[%v] %v", time.Now().Format(time.ANSIC), err) // TODO: print timestamp to
+		fmt.Printf("[%v] %v\n", time.Now().Format(time.ANSIC), err) // TODO: print timestamp to
 	}
 
 	if doResponse {
 		// TODO: maybe we need hashed response. to be considered far later
-		udpServer.WriteTo(*response, addr)
+		fullResponse := append([]byte{header.Command}, *response...)
+		udpServer.WriteTo(fullResponse, addr)
 	}
 }
