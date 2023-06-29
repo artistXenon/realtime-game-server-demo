@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"inagame/HTTP"
+	"inagame/TCP"
 	"inagame/UDP"
 	"inagame/state"
 	// mazer "inagame/maze"
@@ -22,6 +23,7 @@ func main() {
 	fmt.Println(state.GameCapacity)
 	go startHTTP()
 	go startUDP()
+	go startTCP()
 
 	x := <-ch
 	fmt.Println(x)
@@ -53,5 +55,21 @@ func startUDP() {
 			}
 			go UDP.UDPHandler(udpServer, addr, &buf, resLen)
 		}
+	}
+}
+
+func startTCP() {
+	tcpServer, err := net.Listen("tcp", ":5003")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer tcpServer.Close()
+
+	for {
+		conn, err := tcpServer.Accept()
+		if err != nil {
+			continue
+		}
+		go TCP.TCPHandler(conn)
 	}
 }
