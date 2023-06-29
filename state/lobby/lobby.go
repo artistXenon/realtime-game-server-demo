@@ -16,7 +16,7 @@ type Lobby struct {
 	State   int8 // enum Lobby State
 
 	Teams []*Team
-	Maze  maze.Maze
+	Maze  *maze.Maze
 }
 
 func NewLobby(id string, private bool) *Lobby {
@@ -25,8 +25,8 @@ func NewLobby(id string, private bool) *Lobby {
 	lobby.Id = id
 	lobby.Private = private
 	lobby.Teams = []*Team{
-		{Id: 0},
-		{Id: 1},
+		new(Team),
+		new(Team),
 	}
 
 	return lobby
@@ -37,19 +37,19 @@ func (lobby *Lobby) AssignPlayer(player *Player) bool {
 
 	// TODO: check if any player is out dated after join
 
-	for _, team := range lobby.Teams {
+	for id, team := range lobby.Teams {
 		if len(team.Players) > 1 {
 			continue
 		}
 		player.JoinTime = time.Now().UnixMilli()
 		player.Lobby = lobby
-		player.Team = team.Id
+		player.Team = int8(id)
 		player.IsReady = lobby.Private
 		team.Players = append(team.Players, player)
 		return true
 	}
 
-	// one can reach here when insert failed. this shouldnt happen
+	// one can reach here when insert failed. this shouldn't happen
 
 	return false
 }
@@ -58,13 +58,14 @@ func (lobby *Lobby) RemovePlayer(player *Player) bool {
 	if player.Lobby == nil || player.Lobby.Id != lobby.Id {
 		return false
 	}
-	for _, team := range lobby.Teams {
-		for teamIndex, teamPlayer := range team.Players {
-			if teamPlayer.Id == player.Id {
-				team.Players = append(team.Players[:teamIndex], team.Players[teamIndex+1:]...)
-				return true
-			}
+	team := lobby.Teams[player.Team]
+
+	for teamIndex, teamPlayer := range team.Players {
+		if teamPlayer.Id == player.Id {
+			team.Players = append(team.Players[:teamIndex], team.Players[teamIndex+1:]...)
+			return true
 		}
 	}
+
 	return false
 }

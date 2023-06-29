@@ -21,32 +21,27 @@ func onPing(header *Header, body *[]byte) (res *[]byte, reply bool, err error) {
 	}
 
 	timeBytes := (*body)[0:8]
-	sentTime := int64(binary.BigEndian.Uint64(timeBytes))
+	clientTime, sendDelay := int64(binary.BigEndian.Uint64(timeBytes)), int16(binary.BigEndian.Uint16((*body)[8:]))
 
-	lastPing := time.Now().UnixMilli()
-	header.User.LastPing = lastPing
-	receiveDelay := int16(lastPing - sentTime)
+	now := time.Now().UnixMilli()
+	receiveDelay := int16(now - clientTime)
+
+	var ping, offset int16 = 0, 0
+	if sendDelay != -32768 {
+		ping = int16(now - header.User.LastPing)
+		offset = (int16(sendDelay) + receiveDelay) / 2
+		header.User.AppendPing(ping, offset)
+	}
+
+	header.User.LastPing = now
 	header.User.ReceiveDelay = receiveDelay
 
 	// generate ping res
 	pingBytes := make([]byte, 10)
-	binary.BigEndian.PutUint64(pingBytes, uint64(lastPing))
+	binary.BigEndian.PutUint64(pingBytes, uint64(now))
 	binary.BigEndian.PutUint16(pingBytes[8:], uint16(receiveDelay))
+	header.Command = COMMAND_PONG
 
+	fmt.Printf("ping: %d offset: %d\n", header.User.AvgPing(), header.User.AvgOffset())
 	return &pingBytes, true, nil
-}
-
-func onPong(header *Header, body *[]byte) (res *[]byte, reply bool, err error) {
-	if header.User == nil {
-		return nil, false, errors.New("failed to identify user on ping message")
-	}
-
-	_, offset, sendDelay := binary.BigEndian.Uint16(*body), binary.BigEndian.Uint16((*body)[2:]), binary.BigEndian.Uint16((*body)[4:])
-
-	header.User.Ping = int16(time.Now().UnixMilli() - header.User.LastPing)
-	header.User.SendDelay = int16(sendDelay)
-	header.User.TimeOffset = int16(offset)
-
-	fmt.Printf("ping: %d offset: %d\n", header.User.Ping, header.User.TimeOffset)
-	return nil, false, nil
 }

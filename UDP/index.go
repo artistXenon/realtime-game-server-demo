@@ -20,6 +20,7 @@ type Message struct {
 
 type Header struct {
 	Command byte
+	Count   uint32
 	User    *lobby.Player
 	Lobby   *lobby.Lobby
 }
@@ -33,10 +34,11 @@ type Header struct {
  * [ body ~ ]
  */
 func parseHeader(buf *[]byte, byteLength int) (header *Header, body *[]byte) {
+	packetCount := binary.BigEndian.Uint32((*buf)[0:4])
 	idInt := new(big.Int)
-	idInt.SetBytes((*buf)[5:15])
+	idInt.SetBytes((*buf)[9:19])
 	idString := idInt.String()
-	lobbyString := string((*buf)[15:20])
+	lobbyString := string((*buf)[19:24])
 
 	clientUser := lobby.Players[idString]
 	clientLobby := state.Games[lobbyString]
@@ -47,15 +49,15 @@ func parseHeader(buf *[]byte, byteLength int) (header *Header, body *[]byte) {
 		// previous player joined new lobby. re assign player w/ refreshed session key
 	}
 
-	h := Header{Command: (*buf)[4], User: clientUser}
+	h := Header{Count: packetCount, Command: (*buf)[8], User: clientUser}
 
 	skipHash := h.Command == COMMAND_PING || h.Command == COMMAND_PONG
 
 	if !skipHash {
-		signedBody := append([]byte(clientUser.SessionKey), (*buf)[4:byteLength]...)
+		signedBody := append([]byte(clientUser.SessionKey), (*buf)[8:byteLength]...)
 
-		generatedHash := crypto.GenerateCRCHash(signedBody)
-		if generatedHash != binary.BigEndian.Uint32((*buf)[0:4]) {
+		generatedHash, deliveredHash := crypto.GenerateCRCHash(signedBody), binary.BigEndian.Uint32((*buf)[4:8])
+		if generatedHash != deliveredHash {
 			return nil, nil
 		}
 	}
@@ -86,8 +88,6 @@ func UDPHandler(udpServer net.PacketConn, addr net.Addr, buf *[]byte, byteLength
 		response, doResponse, err = onJoin(header, body)
 	case COMMAND_PING:
 		response, doResponse, err = onPing(header, body)
-	case COMMAND_PONG:
-		_, doResponse, err = onPong(header, body)
 	default:
 		// something is wrong. ignore packet
 	}
@@ -97,8 +97,8 @@ func UDPHandler(udpServer net.PacketConn, addr net.Addr, buf *[]byte, byteLength
 	}
 
 	if doResponse {
-		// TODO: maybe we need hashed response. to be considered far later
-		fullResponse := append([]byte{header.Command}, *response...)
-		udpServer.WriteTo(fullResponse, addr)
+		responseBody := append([]byte{header.Command}, *response...)
+
+		udpServer.WriteTo(responseBody, addr)
 	}
 }
