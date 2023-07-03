@@ -42,6 +42,20 @@ func TCPHandler(conn net.Conn) {
 			player.TCP = &conn
 			isPlayerBoundConnection = true
 			fmt.Printf("%s joined lobby %s\n", player.Id, player.Lobby.Id)
+			continue
+		}
+		command := buf[0]
+		body := buf[1:length]
+		var res *[]byte
+		switch command {
+		case COMMAND_STATE:
+			res, err = stateHandler(&body)
+		}
+
+		if err != nil {
+			log.Printf("state error: %v", err)
+		} else {
+			conn.Write(*res)
 		}
 
 		// to some stuffs for communication.

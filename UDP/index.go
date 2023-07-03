@@ -20,7 +20,7 @@ type Message struct {
 
 type Header struct {
 	Command byte
-	Count   uint32
+	Count   []byte
 	User    *lobby.Player
 	Lobby   *lobby.Lobby
 }
@@ -34,7 +34,7 @@ type Header struct {
  * [ body ~ ]
  */
 func parseHeader(buf *[]byte, byteLength int) (header *Header, body *[]byte) {
-	packetCount := binary.BigEndian.Uint32((*buf)[0:4])
+	packetCount := (*buf)[0:4]
 	idInt := new(big.Int)
 	idInt.SetBytes((*buf)[9:19])
 	idString := idInt.String()
@@ -64,7 +64,7 @@ func parseHeader(buf *[]byte, byteLength int) (header *Header, body *[]byte) {
 
 	h.Lobby = clientLobby
 
-	bd := (*buf)[20:byteLength]
+	bd := (*buf)[24:byteLength]
 	return &h, &bd
 }
 
@@ -84,8 +84,8 @@ func UDPHandler(udpServer net.PacketConn, addr net.Addr, buf *[]byte, byteLength
 	case COMMAND_CONNECT:
 		// do something
 		// or does not happen?
-	case COMMAND_JOIN:
-		response, doResponse, err = onJoin(header, body)
+	// case COMMAND_JOIN:
+	// 	response, doResponse, err = onJoin(header, body)
 	case COMMAND_PING:
 		response, doResponse, err = onPing(header, body)
 	default:
@@ -93,11 +93,14 @@ func UDPHandler(udpServer net.PacketConn, addr net.Addr, buf *[]byte, byteLength
 	}
 
 	if err != nil {
-		fmt.Printf("[%v] %v\n", time.Now().Format(time.ANSIC), err) // TODO: print timestamp to
+		fmt.Printf("[%v] %v\n", time.Now().Format(time.ANSIC), err)
 	}
 
 	if doResponse {
-		responseBody := append([]byte{header.Command}, *response...)
+		responseBody := make([]byte, 5+len(*response))
+		responseBody[0] = header.Command
+		copy(responseBody[1:], header.Count)
+		copy(responseBody[5:], *response)
 
 		udpServer.WriteTo(responseBody, addr)
 	}

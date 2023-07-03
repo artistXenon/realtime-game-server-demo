@@ -14,7 +14,7 @@ func GetConnection() (databse *sql.DB, err error) {
 		return db, nil
 	}
 
-	dpf := mysql.Config{
+	dpf := mysql.Config{ // TODO: write a config file for further security.
 		User:   "ailre",
 		Passwd: "@rtist!nside",
 		Net:    "tcp",

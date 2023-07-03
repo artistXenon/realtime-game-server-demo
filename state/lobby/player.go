@@ -12,6 +12,7 @@ type Player struct {
 	Id         string
 	Name       string
 	SessionKey string
+	UDPT       uint32
 	TCP        *net.Conn
 
 	LastPing     int64
@@ -19,6 +20,7 @@ type Player struct {
 	SendDelay    int16
 	TimeOffset   []int16
 	Ping         []int16
+	Loss         []bool
 
 	Lobby    *Lobby
 	JoinTime int64
@@ -68,6 +70,15 @@ func (player *Player) AppendPing(ping int16, offset int16) {
 	}
 }
 
+func (player *Player) AppendLoss(loss int16) { // TODO: calculate loss precisely. we r getting 1 on nothing
+	player.Loss = append(player.Loss, true)
+
+	lossOverSize := len(player.Loss) - ping_buffer
+	if lossOverSize > 0 {
+		player.Loss = player.Loss[lossOverSize:]
+	}
+}
+
 func (player *Player) AvgPing() (ping int16) {
 	pingsLength := int16(len(player.Ping))
 	if pingsLength == 0 {
@@ -90,4 +101,18 @@ func (player *Player) AvgOffset() (offset int16) {
 		sumOffset += v
 	}
 	return sumOffset / offsetsLength
+}
+
+func (player *Player) LossRate() (loss float32) {
+	lossLength := len(player.Loss)
+	if lossLength == 0 {
+		return -1
+	}
+	lossCount := 0
+	for _, v := range player.Loss {
+		if v {
+			lossCount += 1
+		}
+	}
+	return float32(lossCount) / float32(lossLength)
 }
