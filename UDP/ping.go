@@ -50,6 +50,9 @@ func onPing(header *Header, body *[]byte) (res *[]byte, reply bool, err error) {
 	binary.BigEndian.PutUint16(pingBytes[8:], uint16(receiveDelay))
 	header.Command = COMMAND_PONG
 
-	fmt.Printf("ping: %d offset: %d loss: %f\n", header.User.AvgPing(), header.User.AvgOffset(), header.User.LossRate())
+	if false {
+		fmt.Printf("ping: %d offset: %d loss: %f\n", header.User.AvgPing(), header.User.AvgOffset(), header.User.LossRate())
+	}
+
 	return &pingBytes, true, nil
 }
