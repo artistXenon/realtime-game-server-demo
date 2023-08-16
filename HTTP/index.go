@@ -34,7 +34,7 @@ func HTTPCreateHandler(w http.ResponseWriter, req *http.Request) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	if len(state.Games) >= state.GameCapacity {
+	if len(lobby.Lobbys) >= state.GameCapacity {
 		w.WriteHeader(400)
 		w.Write([]byte("no capacity"))
 		return
@@ -46,7 +46,7 @@ func HTTPCreateHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	lb := lobby.NewLobby(id, b)
-	state.Games[id] = lb
+	lobby.Lobbys[id] = lb
 
 	fmt.Printf("lobby was created with id %s\n", id)
 
@@ -73,7 +73,7 @@ func HTTPJoinHandler(w http.ResponseWriter, req *http.Request) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	clientLobby := state.Games[lid]
+	clientLobby := lobby.Lobbys[lid]
 	clientUser := lobby.Players[uid]
 
 	if clientLobby == nil { // shouldn't happen

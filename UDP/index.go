@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"inagame/crypto"
-	"inagame/state"
 	"inagame/state/lobby"
 	"math/big"
 	"net"
@@ -41,7 +40,7 @@ func parseHeader(buf *[]byte, byteLength int) (header *Header, body *[]byte) {
 	lobbyString := string((*buf)[19:24])
 
 	clientUser := lobby.Players[idString]
-	clientLobby := state.Games[lobbyString]
+	clientLobby := lobby.Lobbys[lobbyString]
 
 	// new player on this server. create and assign
 	if clientUser == nil || clientLobby == nil || clientUser.Lobby.Id != clientLobby.Id {
