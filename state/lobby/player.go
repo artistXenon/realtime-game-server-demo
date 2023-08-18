@@ -31,7 +31,7 @@ type Player struct {
 	// mutable on waiting lobby
 	Team     int8
 	IsLeader bool
-	IsReady  bool
+	// IsReady  bool
 
 	// mutable on gaming lobby
 	PositionX int16

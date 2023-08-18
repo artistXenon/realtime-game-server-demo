@@ -80,7 +80,7 @@ func (lobby *Lobby) AssignPlayer(player *Player) bool {
 		player.JoinTime = time.Now().UnixMilli()
 		player.Lobby = lobby
 		player.Team = int8(id)
-		player.IsReady = !lobby.Private
+		// player.IsReady = !lobby.Private
 		team.Players = append(team.Players, player)
 		created = true
 	}

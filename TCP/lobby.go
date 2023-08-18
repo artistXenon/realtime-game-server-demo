@@ -13,9 +13,9 @@ func lobbyHandler(buf *[]byte, player *lobby.Player) (res *[]byte, err error) {
 		for _, p := range team.Players {
 			playerByte := make([]byte, 30)
 			playerByte[0] = 0b1000_0000
-			if p.IsReady {
-				playerByte[0] |= 0b0100_0000
-			}
+			// if p.IsReady {
+			// 	playerByte[0] |= 0b0100_0000
+			// }
 			if p.IsLeader {
 				playerByte[0] |= 0b0010_0000
 			}
