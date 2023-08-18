@@ -81,6 +81,12 @@ func HTTPJoinHandler(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("lobby does not exist"))
 		return
 	}
+	currentPlayers := clientLobby.GetAllPlayers()
+	if len(currentPlayers) > 3 {
+		w.WriteHeader(400)
+		w.Write([]byte("lobby is full"))
+		return
+	}
 
 	if clientUser == nil {
 		sessionKey := db.GetPlayer(uid, lid)
