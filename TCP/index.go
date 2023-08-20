@@ -17,17 +17,20 @@ func TCPHandler(conn net.Conn) {
 	buf := make([]byte, 1024)
 
 	log.Printf("connection made %p", conn)
+	defer log.Printf("connection closed %p", conn)
 
 	for {
 		length, err := conn.Read(buf)
 		if err != nil {
 			if err == io.EOF {
-				log.Printf("connection closed %p", conn)
 				// connection closed
 			} else {
 				log.Printf("unresolved error: %v", err)
-				time.Sleep(5 * time.Second)
+				// time.Sleep(5 * time.Second)
+				// continue
 			}
+			// TODO: remove player bound to this connection
+			// tell other players this player is gone
 			break
 		}
 
@@ -73,9 +76,12 @@ func TCPHandler(conn net.Conn) {
 		command = buf[0]
 		body := buf[1:length]
 		var res *[]byte
+		var disconnect bool
 		switch command {
 		case COMMAND_LOBBY:
-			res, err = lobbyHandler(&body, player) // todo" eat player/lobby
+			res, disconnect, err = lobbyHandler(&body, player) // todo" eat player/lobby
+		case COMMAND_LEAVE:
+			res, disconnect, err = lobbyLeaveHandler(&body, player)
 		}
 
 		var resLength int32 = int32(len(*res))
@@ -85,8 +91,13 @@ func TCPHandler(conn net.Conn) {
 
 		if err != nil {
 			log.Printf("state error: %v", err)
-		} else {
+		}
+		if res != nil {
 			conn.Write(append(resMeta, *res...))
+		}
+		if disconnect {
+			conn.Close()
+			return
 		}
 
 		// to some stuffs for communication.

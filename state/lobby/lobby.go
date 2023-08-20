@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"inagame/db"
 	maze "inagame/maze"
 	"time"
 )
@@ -40,6 +41,7 @@ func (lobby *Lobby) DestroyLobby(broadcast bool) {
 		// disconnect connected players
 	}
 	delete(Lobbys, lobby.Id)
+	db.DeleteLobby(lobby.Id)
 	// remove from db
 
 }
@@ -55,7 +57,9 @@ func (lobby *Lobby) GetAllPlayers() []*Player {
 }
 
 func (lobby *Lobby) AssignPlayer(player *Player) bool {
-	player.Lobby.RemovePlayer(player)
+	if player.Lobby != nil && player.Lobby.Id != lobby.Id {
+		player.Lobby.RemovePlayer(player)
+	}
 
 	// TODO: check if any player is out dated after join
 
@@ -105,6 +109,7 @@ func (lobby *Lobby) RemovePlayer(player *Player) bool {
 			for tid, tPlayer := range team.Players {
 				if cPlayer.Id == tPlayer.Id {
 					team.Players = append(team.Players[:tid], team.Players[tid+1:]...)
+					tPlayer.Lobby = nil
 					removed = true
 				}
 			}

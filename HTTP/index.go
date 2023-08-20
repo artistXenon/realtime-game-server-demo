@@ -97,7 +97,7 @@ func HTTPJoinHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		lobby.CreatePlayer(uid, *sessionKey, clientLobby)
 		// previous player joined new lobby. re assign player w/ refreshed session key
-	} else if clientUser.Lobby.Id != clientLobby.Id {
+	} else if clientUser.Lobby == nil || clientUser.Lobby.Id != clientLobby.Id {
 		sessionKey := db.GetPlayer(uid, lid)
 		if sessionKey == nil {
 			w.WriteHeader(400)

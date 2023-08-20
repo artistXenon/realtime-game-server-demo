@@ -5,7 +5,7 @@ import (
 	"inagame/state/lobby"
 )
 
-func lobbyHandler(buf *[]byte, player *lobby.Player) (res *[]byte, err error) {
+func lobbyHandler(buf *[]byte, player *lobby.Player) (res *[]byte, disconnect bool, err error) {
 	resBytes := &[]byte{(byte)(player.Lobby.State)}
 
 	for _, team := range player.Lobby.Teams {
@@ -38,11 +38,10 @@ func lobbyHandler(buf *[]byte, player *lobby.Player) (res *[]byte, err error) {
 		}
 	}
 
-	return resBytes, nil
+	return resBytes, false, nil
 }
 
 /*
-
 state 1
 
 player1 state 1 []
@@ -55,5 +54,18 @@ player1 team 1
 player1 name 16
 player1 id 5
 player1 character 2
+*/
 
+func lobbyLeaveHandler(buf *[]byte, player *lobby.Player) (res *[]byte, disconnect bool, err error) {
+	resBytes := &[]byte{0x00}
+	player.Lobby.RemovePlayer(player)
+	// MAYBE TODO: update db so that player has no lobby
+	return resBytes, true, nil
+}
+
+// status code of leave.
+/*
+0: requested leave
+1: lobby kicked
+2: server's decision (bad internet)
 */
